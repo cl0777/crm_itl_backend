@@ -1,16 +1,32 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { MessageModel } from './message.model';
+import { OtpModel } from './otp.model';
 import { SendMailDto } from './dto/send-mail.dto';
+import { SendOtpDto } from './dto/send-otp.dto';
+import { CheckOtpDto } from './dto/check-otp.dto';
 import * as nodemailer from 'nodemailer';
 import { marked } from 'marked';
 import { CustomerModel } from '../customers/customer.model';
+import { CustomerAccountModel } from '../customers/customer-account.model';
+import { Op } from 'sequelize';
 
 @Injectable()
 export class MessagesService {
   constructor(
     @InjectModel(MessageModel)
     private readonly messageModel: typeof MessageModel,
+    @InjectModel(OtpModel)
+    private readonly otpModel: typeof OtpModel,
+    @InjectModel(CustomerAccountModel)
+    private readonly customerAccountModel: typeof CustomerAccountModel,
+    @InjectModel(CustomerModel)
+    private readonly customerModel: typeof CustomerModel,
   ) {}
 
   private buildTransporter() {
@@ -39,7 +55,10 @@ export class MessagesService {
         user,
         pass,
       },
-    });
+      connectionTimeout: 10000, // 10 seconds connection timeout
+      greetingTimeout: 10000, // 10 seconds greeting timeout
+      socketTimeout: 10000, // 10 seconds socket timeout
+    } as any);
   }
 
   private getFromAddress() {
@@ -170,5 +189,187 @@ export class MessagesService {
       }
     }
     return results;
+  }
+
+  private generateOtpCode(): string {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+  }
+
+  private async cleanupExpiredOtps() {
+    const expiredOtps = await this.otpModel.findAll({
+      where: {
+        expiresAt: { [Op.lt]: new Date() },
+        verified: false,
+      },
+    });
+
+    for (const otp of expiredOtps) {
+      if (otp.customerAccountId) {
+        await this.deleteRegistration(otp.customerAccountId);
+      }
+      await otp.destroy();
+    }
+  }
+
+  private async deleteRegistration(customerAccountId: number) {
+    const account = await this.customerAccountModel.findByPk(customerAccountId);
+    if (account) {
+      const customerId = account.customerId;
+      await account.destroy();
+      if (customerId) {
+        await this.customerModel.destroy({ where: { id: customerId } });
+      }
+    }
+  }
+
+  async sendOtp(dto: SendOtpDto) {
+    const email = dto.email.toLowerCase().trim();
+
+    // Clean up expired OTPs first
+    await this.cleanupExpiredOtps();
+
+    // Check if there's an existing unverified OTP for this email
+    const existingOtp = await this.otpModel.findOne({
+      where: {
+        email,
+        verified: false,
+        expiresAt: { [Op.gt]: new Date() },
+      },
+      order: [['createdAt', 'DESC']],
+    });
+
+    // Find associated customer account if exists
+    const customerAccount = await this.customerAccountModel.findOne({
+      where: { email },
+    });
+
+    const otpCode = this.generateOtpCode();
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + 10); // OTP expires in 10 minutes
+
+    if (existingOtp) {
+      // Update existing OTP
+      await existingOtp.update({
+        code: otpCode,
+        expiresAt,
+        attempts: 0,
+      });
+    } else {
+      // Create new OTP
+      await this.otpModel.create({
+        email,
+        code: otpCode,
+        expiresAt,
+        attempts: 0,
+        verified: false,
+        customerAccountId: customerAccount?.id || null,
+      });
+    }
+
+    // Send OTP email
+    const transporter = this.buildTransporter();
+    const fromAddress = this.getFromAddress();
+
+    try {
+      await Promise.race([
+        transporter.sendMail({
+          from: fromAddress,
+          to: email,
+          subject: 'Your OTP Verification Code',
+          text: `Your OTP verification code is: ${otpCode}\n\nThis code will expire in 10 minutes.`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2>OTP Verification Code</h2>
+              <p>Your OTP verification code is:</p>
+              <div style="background-color: #f4f4f4; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; margin: 20px 0;">
+                ${otpCode}
+              </div>
+              <p>This code will expire in 10 minutes.</p>
+              <p style="color: #666; font-size: 12px;">If you didn't request this code, please ignore this email.</p>
+            </div>
+          `,
+        }),
+        new Promise((_, reject) =>
+          setTimeout(
+            () => reject(new Error('SMTP connection timeout after 15 seconds')),
+            15000,
+          ),
+        ),
+      ]);
+    } catch (err: any) {
+      // Clean up the OTP record if email sending fails
+      const otpRecord = await this.otpModel.findOne({
+        where: { email, code: otpCode },
+      });
+      if (otpRecord) {
+        await otpRecord.destroy();
+      }
+
+      const errorMessage =
+        err?.message || err?.code || 'Unknown error occurred';
+      throw new InternalServerErrorException(
+        `Failed to send OTP email: ${errorMessage}. Please check your SMTP configuration and network connectivity.`,
+      );
+    }
+
+    return {
+      success: true,
+      message: 'OTP sent successfully',
+      email,
+      expiresIn: 600, // 10 minutes in seconds
+    };
+  }
+
+  async checkOtp(dto: CheckOtpDto) {
+    const email = dto.email.toLowerCase().trim();
+    const otpCode = dto.otp.trim();
+
+    // Clean up expired OTPs first
+    await this.cleanupExpiredOtps();
+
+    const otp = await this.otpModel.findOne({
+      where: {
+        email,
+        verified: false,
+        expiresAt: { [Op.gt]: new Date() },
+      },
+      order: [['createdAt', 'DESC']],
+    });
+
+    if (!otp) {
+      throw new NotFoundException(
+        'OTP not found or expired. Please request a new OTP.',
+      );
+    }
+
+    // Check if OTP is correct
+    if (otp.code !== otpCode) {
+      const newAttempts = otp.attempts + 1;
+
+      if (newAttempts >= 5) {
+        // Delete registration if 5 failed attempts
+        if (otp.customerAccountId) {
+          await this.deleteRegistration(otp.customerAccountId);
+        }
+        await otp.destroy();
+        throw new BadRequestException(
+          'Maximum attempts exceeded. Registration has been deleted. Please register again.',
+        );
+      }
+
+      await otp.update({ attempts: newAttempts });
+      throw new BadRequestException(
+        `Invalid OTP. ${5 - newAttempts} attempts remaining.`,
+      );
+    }
+
+    // OTP is correct - mark as verified
+    await otp.update({ verified: true });
+
+    return {
+      success: true,
+      message: 'OTP verified successfully',
+      email,
+    };
   }
 }

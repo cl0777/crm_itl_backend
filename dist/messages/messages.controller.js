@@ -18,6 +18,8 @@ const swagger_1 = require("@nestjs/swagger");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const messages_service_1 = require("./messages.service");
 const send_mail_dto_1 = require("./dto/send-mail.dto");
+const send_otp_dto_1 = require("./dto/send-otp.dto");
+const check_otp_dto_1 = require("./dto/check-otp.dto");
 const platform_express_1 = require("@nestjs/platform-express");
 const multer_1 = require("multer");
 let MessagesController = class MessagesController {
@@ -36,10 +38,18 @@ let MessagesController = class MessagesController {
         console.log('User ID:', req.user?.userId);
         return this.messagesService.sendMail(dto, attachments || [], req.user.userId);
     }
+    async sendOtp(dto) {
+        return this.messagesService.sendOtp(dto);
+    }
+    async checkOtp(dto) {
+        return this.messagesService.checkOtp(dto);
+    }
 };
 exports.MessagesController = MessagesController;
 __decorate([
     (0, common_1.Get)('history'),
+    (0, swagger_1.ApiBearerAuth)('access-token'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, swagger_1.ApiOkResponse)({ description: 'Get message history' }),
     __param(0, (0, common_1.Req)()),
     __metadata("design:type", Function),
@@ -48,6 +58,8 @@ __decorate([
 ], MessagesController.prototype, "history", null);
 __decorate([
     (0, common_1.Post)('mail'),
+    (0, swagger_1.ApiBearerAuth)('access-token'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, swagger_1.ApiOkResponse)({ description: 'Send emails to customers' }),
     (0, swagger_1.ApiConsumes)('multipart/form-data'),
     (0, swagger_1.ApiBody)({
@@ -65,10 +77,24 @@ __decorate([
         Array, Object]),
     __metadata("design:returntype", Promise)
 ], MessagesController.prototype, "sendMail", null);
+__decorate([
+    (0, common_1.Post)('otp/send'),
+    (0, swagger_1.ApiOkResponse)({ description: 'Send OTP to email' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [send_otp_dto_1.SendOtpDto]),
+    __metadata("design:returntype", Promise)
+], MessagesController.prototype, "sendOtp", null);
+__decorate([
+    (0, common_1.Post)('otp/check'),
+    (0, swagger_1.ApiOkResponse)({ description: 'Verify OTP code' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [check_otp_dto_1.CheckOtpDto]),
+    __metadata("design:returntype", Promise)
+], MessagesController.prototype, "checkOtp", null);
 exports.MessagesController = MessagesController = __decorate([
     (0, swagger_1.ApiTags)('messages'),
-    (0, swagger_1.ApiBearerAuth)('access-token'),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Controller)({ path: 'messages', version: '1' }),
     __metadata("design:paramtypes", [messages_service_1.MessagesService])
 ], MessagesController);

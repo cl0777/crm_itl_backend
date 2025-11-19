@@ -16,12 +16,18 @@ exports.MessagesService = void 0;
 const common_1 = require("@nestjs/common");
 const sequelize_1 = require("@nestjs/sequelize");
 const message_model_1 = require("./message.model");
+const otp_model_1 = require("./otp.model");
 const nodemailer = require("nodemailer");
 const marked_1 = require("marked");
 const customer_model_1 = require("../customers/customer.model");
+const customer_account_model_1 = require("../customers/customer-account.model");
+const sequelize_2 = require("sequelize");
 let MessagesService = class MessagesService {
-    constructor(messageModel) {
+    constructor(messageModel, otpModel, customerAccountModel, customerModel) {
         this.messageModel = messageModel;
+        this.otpModel = otpModel;
+        this.customerAccountModel = customerAccountModel;
+        this.customerModel = customerModel;
     }
     buildTransporter() {
         const host = process.env.SMTP_HOST;
@@ -43,6 +49,9 @@ let MessagesService = class MessagesService {
                 user,
                 pass,
             },
+            connectionTimeout: 10000,
+            greetingTimeout: 10000,
+            socketTimeout: 10000,
         });
     }
     getFromAddress() {
@@ -149,11 +158,150 @@ let MessagesService = class MessagesService {
         }
         return results;
     }
+    generateOtpCode() {
+        return Math.floor(100000 + Math.random() * 900000).toString();
+    }
+    async cleanupExpiredOtps() {
+        const expiredOtps = await this.otpModel.findAll({
+            where: {
+                expiresAt: { [sequelize_2.Op.lt]: new Date() },
+                verified: false,
+            },
+        });
+        for (const otp of expiredOtps) {
+            if (otp.customerAccountId) {
+                await this.deleteRegistration(otp.customerAccountId);
+            }
+            await otp.destroy();
+        }
+    }
+    async deleteRegistration(customerAccountId) {
+        const account = await this.customerAccountModel.findByPk(customerAccountId);
+        if (account) {
+            const customerId = account.customerId;
+            await account.destroy();
+            if (customerId) {
+                await this.customerModel.destroy({ where: { id: customerId } });
+            }
+        }
+    }
+    async sendOtp(dto) {
+        const email = dto.email.toLowerCase().trim();
+        await this.cleanupExpiredOtps();
+        const existingOtp = await this.otpModel.findOne({
+            where: {
+                email,
+                verified: false,
+                expiresAt: { [sequelize_2.Op.gt]: new Date() },
+            },
+            order: [['createdAt', 'DESC']],
+        });
+        const customerAccount = await this.customerAccountModel.findOne({
+            where: { email },
+        });
+        const otpCode = this.generateOtpCode();
+        const expiresAt = new Date();
+        expiresAt.setMinutes(expiresAt.getMinutes() + 10);
+        if (existingOtp) {
+            await existingOtp.update({
+                code: otpCode,
+                expiresAt,
+                attempts: 0,
+            });
+        }
+        else {
+            await this.otpModel.create({
+                email,
+                code: otpCode,
+                expiresAt,
+                attempts: 0,
+                verified: false,
+                customerAccountId: customerAccount?.id || null,
+            });
+        }
+        const transporter = this.buildTransporter();
+        const fromAddress = this.getFromAddress();
+        try {
+            await Promise.race([
+                transporter.sendMail({
+                    from: fromAddress,
+                    to: email,
+                    subject: 'Your OTP Verification Code',
+                    text: `Your OTP verification code is: ${otpCode}\n\nThis code will expire in 10 minutes.`,
+                    html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2>OTP Verification Code</h2>
+              <p>Your OTP verification code is:</p>
+              <div style="background-color: #f4f4f4; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; margin: 20px 0;">
+                ${otpCode}
+              </div>
+              <p>This code will expire in 10 minutes.</p>
+              <p style="color: #666; font-size: 12px;">If you didn't request this code, please ignore this email.</p>
+            </div>
+          `,
+                }),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('SMTP connection timeout after 15 seconds')), 15000)),
+            ]);
+        }
+        catch (err) {
+            const otpRecord = await this.otpModel.findOne({
+                where: { email, code: otpCode },
+            });
+            if (otpRecord) {
+                await otpRecord.destroy();
+            }
+            const errorMessage = err?.message || err?.code || 'Unknown error occurred';
+            throw new common_1.InternalServerErrorException(`Failed to send OTP email: ${errorMessage}. Please check your SMTP configuration and network connectivity.`);
+        }
+        return {
+            success: true,
+            message: 'OTP sent successfully',
+            email,
+            expiresIn: 600,
+        };
+    }
+    async checkOtp(dto) {
+        const email = dto.email.toLowerCase().trim();
+        const otpCode = dto.otp.trim();
+        await this.cleanupExpiredOtps();
+        const otp = await this.otpModel.findOne({
+            where: {
+                email,
+                verified: false,
+                expiresAt: { [sequelize_2.Op.gt]: new Date() },
+            },
+            order: [['createdAt', 'DESC']],
+        });
+        if (!otp) {
+            throw new common_1.NotFoundException('OTP not found or expired. Please request a new OTP.');
+        }
+        if (otp.code !== otpCode) {
+            const newAttempts = otp.attempts + 1;
+            if (newAttempts >= 5) {
+                if (otp.customerAccountId) {
+                    await this.deleteRegistration(otp.customerAccountId);
+                }
+                await otp.destroy();
+                throw new common_1.BadRequestException('Maximum attempts exceeded. Registration has been deleted. Please register again.');
+            }
+            await otp.update({ attempts: newAttempts });
+            throw new common_1.BadRequestException(`Invalid OTP. ${5 - newAttempts} attempts remaining.`);
+        }
+        await otp.update({ verified: true });
+        return {
+            success: true,
+            message: 'OTP verified successfully',
+            email,
+        };
+    }
 };
 exports.MessagesService = MessagesService;
 exports.MessagesService = MessagesService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, sequelize_1.InjectModel)(message_model_1.MessageModel)),
-    __metadata("design:paramtypes", [Object])
+    __param(1, (0, sequelize_1.InjectModel)(otp_model_1.OtpModel)),
+    __param(2, (0, sequelize_1.InjectModel)(customer_account_model_1.CustomerAccountModel)),
+    __param(3, (0, sequelize_1.InjectModel)(customer_model_1.CustomerModel)),
+    __metadata("design:paramtypes", [Object, Object, Object, Object])
 ], MessagesService);
 //# sourceMappingURL=messages.service.js.map

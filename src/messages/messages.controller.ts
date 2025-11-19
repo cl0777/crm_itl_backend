@@ -18,17 +18,19 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { MessagesService } from './messages.service';
 import { SendMailDto } from './dto/send-mail.dto';
+import { SendOtpDto } from './dto/send-otp.dto';
+import { CheckOtpDto } from './dto/check-otp.dto';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 
 @ApiTags('messages')
-@ApiBearerAuth('access-token')
-@UseGuards(JwtAuthGuard)
 @Controller({ path: 'messages', version: '1' })
 export class MessagesController {
   constructor(private readonly messagesService: MessagesService) {}
 
   @Get('history')
+  @ApiBearerAuth('access-token')
+  @UseGuards(JwtAuthGuard)
   @ApiOkResponse({ description: 'Get message history' })
   async history(@Req() req: any) {
     const userRole = req.user?.role;
@@ -37,6 +39,8 @@ export class MessagesController {
   }
 
   @Post('mail')
+  @ApiBearerAuth('access-token')
+  @UseGuards(JwtAuthGuard)
   @ApiOkResponse({ description: 'Send emails to customers' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -62,5 +66,17 @@ export class MessagesController {
       attachments || [],
       req.user.userId,
     );
+  }
+
+  @Post('otp/send')
+  @ApiOkResponse({ description: 'Send OTP to email' })
+  async sendOtp(@Body() dto: SendOtpDto) {
+    return this.messagesService.sendOtp(dto);
+  }
+
+  @Post('otp/check')
+  @ApiOkResponse({ description: 'Verify OTP code' })
+  async checkOtp(@Body() dto: CheckOtpDto) {
+    return this.messagesService.checkOtp(dto);
   }
 }
