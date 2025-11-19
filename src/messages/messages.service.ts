@@ -289,7 +289,7 @@ export class MessagesService {
               </div>
               <p>This code will expire in 10 minutes.</p>
               <p style="color: #666; font-size: 12px;">If you didn't request this code, please ignore this email.</p>
-              <p style="color: #666; font-size: 12px;">If you have any questions, please contact us at ${fromAddress}.</p>
+              <p style="color: #666; font-size: 12px;">If you have any questions, please contact us at ${fromAddress} | Contact: +993 71 713777</p>
               <p style="color: #666; font-size: 12px;">This is an automated email. Please do not reply to this email.</p>
               <p style="color: #666; font-size: 12px;">Best regards,</p>
               <p style="color: #666; font-size: 12px;">Halkara Turkmen Logistik</p>
