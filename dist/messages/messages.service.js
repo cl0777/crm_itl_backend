@@ -230,7 +230,7 @@ let MessagesService = class MessagesService {
                     text: `Your OTP verification code is: ${otpCode}\n\nThis code will expire in 10 minutes.`,
                     html: `
           <center>
-            <img src="https://htl-tm.com//logo.png" alt="Halkara Turkmen Logistik" style="width: 100px; height: 100px;">
+            <img src="https://htl-tm.com//logo.png" alt="Halkara Turkmen Logistik" style="width: 150px; height: 100px;">
           </center>
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
               <h2>OTP Verification Code</h2>
