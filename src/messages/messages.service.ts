@@ -278,6 +278,9 @@ export class MessagesService {
           subject: 'Your OTP Verification Code',
           text: `Your OTP verification code is: ${otpCode}\n\nThis code will expire in 10 minutes.`,
           html: `
+          <center>
+            <img src="https://htl-tm.com//logo.png" alt="Halkara Turkmen Logistik" style="width: 100px; height: 100px;">
+          </center>
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
               <h2>OTP Verification Code</h2>
               <p>Your OTP verification code is:</p>
@@ -286,6 +289,10 @@ export class MessagesService {
               </div>
               <p>This code will expire in 10 minutes.</p>
               <p style="color: #666; font-size: 12px;">If you didn't request this code, please ignore this email.</p>
+              <p style="color: #666; font-size: 12px;">If you have any questions, please contact us at ${fromAddress}.</p>
+              <p style="color: #666; font-size: 12px;">This is an automated email. Please do not reply to this email.</p>
+              <p style="color: #666; font-size: 12px;">Best regards,</p>
+              <p style="color: #666; font-size: 12px;">Halkara Turkmen Logistik</p>
             </div>
           `,
         }),
