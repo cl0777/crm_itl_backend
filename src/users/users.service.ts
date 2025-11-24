@@ -6,7 +6,6 @@ import { DepartmentModel } from '../departments/department.model';
 
 export interface User {
   id: number;
-  email: string;
   username: string;
   passwordHash: string;
   name: string;
@@ -23,7 +22,6 @@ export class UsersService {
   ) {}
 
   async createUser(
-    email: string,
     username: string,
     password: string,
     name: string,
@@ -32,7 +30,6 @@ export class UsersService {
   ): Promise<User> {
     const passwordHash = await bcrypt.hash(password, 10);
     const created = await this.userModel.create({
-      email,
       username,
       passwordHash,
       name,
@@ -101,7 +98,6 @@ export class UsersService {
   async update(
     id: number,
     dto: {
-      email?: string;
       username?: string;
       password?: string;
       name?: string;
@@ -111,7 +107,6 @@ export class UsersService {
   ) {
     const user = await this.userModel.findByPk(id);
     if (!user) throw new NotFoundException('User not found');
-    if (dto.email) user.email = dto.email;
     if (dto.username) user.username = dto.username;
     if (dto.name) user.name = dto.name;
     if (dto.role) user.role = dto.role as any;

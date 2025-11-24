@@ -54,12 +54,26 @@ export class CustomersController {
     return this.customersService.findAll(userId, userRole, userDepartmentId);
   }
 
+  @Get('count')
+  @ApiOkResponse({ description: 'Get total count of customers' })
+  async getCount(@Req() req: any) {
+    const userRole = req.user?.role;
+    const userId = userRole === 'admin' ? undefined : req.user?.userId;
+    const userDepartmentId = req.user?.departmentId;
+    const count = await this.customersService.getCount(
+      userId,
+      userRole,
+      userDepartmentId,
+    );
+    return { count };
+  }
+
   @Get(':id')
   @ApiOkResponse({ description: 'Get customer by id' })
   async findOne(@Param('id') id: string, @Req() req: any) {
     const userRole = req.user?.role;
     const userId = userRole === 'admin' ? undefined : req.user?.userId;
-    return this.customersService.findOne(Number(id), userId);
+    return this.customersService.findOne(Number(id), userId, userRole);
   }
 
   @Patch(':id')
@@ -71,7 +85,7 @@ export class CustomersController {
   ) {
     const userRole = req.user?.role;
     const userId = userRole === 'admin' ? undefined : req.user?.userId;
-    return this.customersService.update(Number(id), dto, userId);
+    return this.customersService.update(Number(id), dto, userId, userRole);
   }
 
   @Delete(':id')
@@ -79,7 +93,7 @@ export class CustomersController {
   async remove(@Param('id') id: string, @Req() req: any) {
     const userRole = req.user?.role;
     const userId = userRole === 'admin' ? undefined : req.user?.userId;
-    await this.customersService.remove(Number(id), userId);
+    await this.customersService.remove(Number(id), userId, userRole);
     return { success: true };
   }
 
@@ -101,12 +115,32 @@ export class CustomersController {
     }),
   )
   async import(@UploadedFile() file: any, @Req() req: any) {
+    console.log('=== CUSTOMER IMPORT REQUEST ===');
+    console.log('File:', {
+      originalname: file?.originalname,
+      mimetype: file?.mimetype,
+      size: file?.size,
+      bufferLength: file?.buffer?.length,
+    });
+    console.log('User ID:', req.user?.userId);
+    console.log('User Role:', req.user?.role);
+
     const user = await this.usersService.findEntityById(req.user.userId);
     const addedByName = user?.name || 'Unknown';
-    return this.customersService.importFromXlsx(
+    console.log('Added By:', addedByName);
+
+    const result = await this.customersService.importFromXlsx(
       file?.buffer || Buffer.alloc(0),
       req.user.userId,
       addedByName,
     );
+
+    console.log('Import Result:', {
+      count: result.count,
+      itemsCount: result.items?.length,
+    });
+    console.log('=== END CUSTOMER IMPORT ===');
+
+    return result;
   }
 }

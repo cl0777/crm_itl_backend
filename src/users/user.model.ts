@@ -11,7 +11,6 @@ import { DepartmentModel } from '../departments/department.model';
 
 export interface UserAttributes {
   id: number;
-  email: string;
   username: string;
   passwordHash: string;
   name: string;
@@ -35,13 +34,6 @@ export class UserModel
     primaryKey: true,
   })
   id: number;
-
-  @Column({
-    type: DataType.STRING,
-    unique: true,
-    allowNull: false,
-  })
-  email: string;
 
   @Column({
     type: DataType.STRING,

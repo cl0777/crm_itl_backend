@@ -3,7 +3,6 @@ import { Optional } from 'sequelize';
 import { DepartmentModel } from '../departments/department.model';
 export interface UserAttributes {
     id: number;
-    email: string;
     username: string;
     passwordHash: string;
     name: string;
@@ -13,7 +12,6 @@ export interface UserAttributes {
 export type UserCreationAttributes = Optional<UserAttributes, 'id' | 'departmentId'>;
 export declare class UserModel extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
     id: number;
-    email: string;
     username: string;
     passwordHash: string;
     name: string;

@@ -39,26 +39,49 @@ let CustomersController = class CustomersController {
         const userDepartmentId = req.user?.departmentId;
         return this.customersService.findAll(userId, userRole, userDepartmentId);
     }
+    async getCount(req) {
+        const userRole = req.user?.role;
+        const userId = userRole === 'admin' ? undefined : req.user?.userId;
+        const userDepartmentId = req.user?.departmentId;
+        const count = await this.customersService.getCount(userId, userRole, userDepartmentId);
+        return { count };
+    }
     async findOne(id, req) {
         const userRole = req.user?.role;
         const userId = userRole === 'admin' ? undefined : req.user?.userId;
-        return this.customersService.findOne(Number(id), userId);
+        return this.customersService.findOne(Number(id), userId, userRole);
     }
     async update(id, dto, req) {
         const userRole = req.user?.role;
         const userId = userRole === 'admin' ? undefined : req.user?.userId;
-        return this.customersService.update(Number(id), dto, userId);
+        return this.customersService.update(Number(id), dto, userId, userRole);
     }
     async remove(id, req) {
         const userRole = req.user?.role;
         const userId = userRole === 'admin' ? undefined : req.user?.userId;
-        await this.customersService.remove(Number(id), userId);
+        await this.customersService.remove(Number(id), userId, userRole);
         return { success: true };
     }
     async import(file, req) {
+        console.log('=== CUSTOMER IMPORT REQUEST ===');
+        console.log('File:', {
+            originalname: file?.originalname,
+            mimetype: file?.mimetype,
+            size: file?.size,
+            bufferLength: file?.buffer?.length,
+        });
+        console.log('User ID:', req.user?.userId);
+        console.log('User Role:', req.user?.role);
         const user = await this.usersService.findEntityById(req.user.userId);
         const addedByName = user?.name || 'Unknown';
-        return this.customersService.importFromXlsx(file?.buffer || Buffer.alloc(0), req.user.userId, addedByName);
+        console.log('Added By:', addedByName);
+        const result = await this.customersService.importFromXlsx(file?.buffer || Buffer.alloc(0), req.user.userId, addedByName);
+        console.log('Import Result:', {
+            count: result.count,
+            itemsCount: result.items?.length,
+        });
+        console.log('=== END CUSTOMER IMPORT ===');
+        return result;
     }
 };
 exports.CustomersController = CustomersController;
@@ -79,6 +102,14 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], CustomersController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Get)('count'),
+    (0, swagger_1.ApiOkResponse)({ description: 'Get total count of customers' }),
+    __param(0, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], CustomersController.prototype, "getCount", null);
 __decorate([
     (0, common_1.Get)(':id'),
     (0, swagger_1.ApiOkResponse)({ description: 'Get customer by id' }),

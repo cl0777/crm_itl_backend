@@ -11,16 +11,15 @@ import { UserModel } from '../users/user.model';
 
 export interface CustomerAttributes {
   id: number;
-  partyName: string;
-  shortname: string;
+  partyName: string; // Company name (kept for DB compatibility)
+  shortname: string; // Represented name (kept for DB compatibility)
   address1: string;
   address2?: string;
-  address3?: string;
   city: string;
   country: string;
   email: string;
-  phone1: string;
-  phone2?: string;
+  phone1: string; // Primary phone (kept for DB compatibility)
+  phone2?: string; // Secondary phone (kept for DB compatibility)
   status: string;
   addedBy: string;
   userId: number;
@@ -41,19 +40,16 @@ export class CustomerModel
   id: number;
 
   @Column({ type: DataType.STRING, allowNull: false })
-  partyName: string;
+  partyName: string; // Company name
 
   @Column({ type: DataType.STRING, allowNull: false })
-  shortname: string;
+  shortname: string; // Represented name
 
   @Column({ type: DataType.STRING, allowNull: false })
   address1: string;
 
   @Column({ type: DataType.STRING, allowNull: true })
   address2?: string;
-
-  @Column({ type: DataType.STRING, allowNull: true })
-  address3?: string;
 
   @Column({ type: DataType.STRING, allowNull: false })
   city: string;
@@ -65,10 +61,10 @@ export class CustomerModel
   email: string;
 
   @Column({ type: DataType.STRING, allowNull: false })
-  phone1: string;
+  phone1: string; // Primary phone
 
   @Column({ type: DataType.STRING, allowNull: true })
-  phone2?: string;
+  phone2?: string; // Secondary phone
 
   @Column({ type: DataType.STRING, allowNull: false })
   status: string;

@@ -7,7 +7,6 @@ export interface CustomerAttributes {
     shortname: string;
     address1: string;
     address2?: string;
-    address3?: string;
     city: string;
     country: string;
     email: string;
@@ -24,7 +23,6 @@ export declare class CustomerModel extends Model<CustomerAttributes, CustomerCre
     shortname: string;
     address1: string;
     address2?: string;
-    address3?: string;
     city: string;
     country: string;
     email: string;

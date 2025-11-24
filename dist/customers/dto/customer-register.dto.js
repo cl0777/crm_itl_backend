@@ -38,13 +38,13 @@ __decorate([
     __metadata("design:type", Number)
 ], CustomerRegisterDto.prototype, "customerId", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ example: 'ABC Corporation' }),
+    (0, swagger_1.ApiProperty)({ example: 'ABC Corporation', description: 'Company name' }),
     (0, class_validator_1.IsNotEmpty)(),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], CustomerRegisterDto.prototype, "partyName", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ example: 'ABC Corp' }),
+    (0, swagger_1.ApiProperty)({ example: 'ABC Corp', description: 'Represented name' }),
     (0, class_validator_1.IsNotEmpty)(),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
@@ -62,12 +62,6 @@ __decorate([
     __metadata("design:type", String)
 ], CustomerRegisterDto.prototype, "address2", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ example: 'Building B', required: false }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsString)(),
-    __metadata("design:type", String)
-], CustomerRegisterDto.prototype, "address3", void 0);
-__decorate([
     (0, swagger_1.ApiProperty)({ example: 'New York' }),
     (0, class_validator_1.IsNotEmpty)(),
     (0, class_validator_1.IsString)(),
@@ -80,13 +74,13 @@ __decorate([
     __metadata("design:type", String)
 ], CustomerRegisterDto.prototype, "country", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ example: '+1-234-567-8900' }),
+    (0, swagger_1.ApiProperty)({ example: '+1-234-567-8900', description: 'Primary phone' }),
     (0, class_validator_1.IsNotEmpty)(),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], CustomerRegisterDto.prototype, "phone1", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ example: '+1-987-654-3210', required: false }),
+    (0, swagger_1.ApiProperty)({ example: '+1-987-654-3210', required: false, description: 'Secondary phone' }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)

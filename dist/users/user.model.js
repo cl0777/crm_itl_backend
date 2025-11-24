@@ -30,14 +30,6 @@ __decorate([
         allowNull: false,
     }),
     __metadata("design:type", String)
-], UserModel.prototype, "email", void 0);
-__decorate([
-    (0, sequelize_typescript_1.Column)({
-        type: sequelize_typescript_1.DataType.STRING,
-        unique: true,
-        allowNull: false,
-    }),
-    __metadata("design:type", String)
 ], UserModel.prototype, "username", void 0);
 __decorate([
     (0, sequelize_typescript_1.Column)({ type: sequelize_typescript_1.DataType.STRING, allowNull: false }),

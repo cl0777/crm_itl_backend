@@ -16,13 +16,13 @@ class UpdateCustomerDto {
 }
 exports.UpdateCustomerDto = UpdateCustomerDto;
 __decorate([
-    (0, swagger_1.ApiPropertyOptional)({ example: 'ABC Corporation' }),
+    (0, swagger_1.ApiPropertyOptional)({ example: 'ABC Corporation', description: 'Company name' }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], UpdateCustomerDto.prototype, "partyName", void 0);
 __decorate([
-    (0, swagger_1.ApiPropertyOptional)({ example: 'ABC Corp' }),
+    (0, swagger_1.ApiPropertyOptional)({ example: 'ABC Corp', description: 'Represented name' }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
@@ -39,12 +39,6 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], UpdateCustomerDto.prototype, "address2", void 0);
-__decorate([
-    (0, swagger_1.ApiPropertyOptional)({ example: 'Building B' }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsString)(),
-    __metadata("design:type", String)
-], UpdateCustomerDto.prototype, "address3", void 0);
 __decorate([
     (0, swagger_1.ApiPropertyOptional)({ example: 'New York' }),
     (0, class_validator_1.IsOptional)(),
@@ -64,13 +58,13 @@ __decorate([
     __metadata("design:type", String)
 ], UpdateCustomerDto.prototype, "email", void 0);
 __decorate([
-    (0, swagger_1.ApiPropertyOptional)({ example: '+1-234-567-8900' }),
+    (0, swagger_1.ApiPropertyOptional)({ example: '+1-234-567-8900', description: 'Primary phone' }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], UpdateCustomerDto.prototype, "phone1", void 0);
 __decorate([
-    (0, swagger_1.ApiPropertyOptional)({ example: '+1-987-654-3210' }),
+    (0, swagger_1.ApiPropertyOptional)({ example: '+1-987-654-3210', description: 'Secondary phone' }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)

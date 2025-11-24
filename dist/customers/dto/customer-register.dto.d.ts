@@ -7,7 +7,6 @@ export declare class CustomerRegisterDto {
     shortname: string;
     address1: string;
     address2?: string;
-    address3?: string;
     city: string;
     country: string;
     phone1: string;

@@ -11,8 +11,21 @@ async function bootstrap() {
     app.useGlobalPipes(new common_1.ValidationPipe({ whitelist: true, transform: true }));
     app.enableVersioning({ type: common_1.VersioningType.URI, defaultVersion: '1' });
     app.setGlobalPrefix('api');
+    const allowedOrigins = process.env.FRONTEND_URL
+        ? process.env.FRONTEND_URL.split(',').map((url) => url.trim())
+        : ['http://localhost:3000', 'http://localhost:5173'];
     app.enableCors({
-        origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+        origin: (origin, callback) => {
+            if (!origin)
+                return callback(null, true);
+            if (allowedOrigins.indexOf(origin) !== -1 ||
+                allowedOrigins.includes('*')) {
+                callback(null, true);
+            }
+            else {
+                callback(new Error('Not allowed by CORS'));
+            }
+        },
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization'],

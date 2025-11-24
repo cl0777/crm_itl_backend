@@ -55,11 +55,9 @@ let OrdersService = class OrdersService {
         try {
             const adminUsers = await this.userModel.findAll({
                 where: { role: 'admin' },
-                attributes: ['email'],
+                attributes: ['id', 'name'],
             });
-            const adminEmails = adminUsers
-                .map((u) => u.email)
-                .filter((email) => email && email.trim());
+            const adminEmails = [];
             if (adminEmails.length > 0) {
                 const htmlBody = `
           <h2>New Order Created</h2>

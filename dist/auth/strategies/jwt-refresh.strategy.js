@@ -27,7 +27,6 @@ let JwtRefreshStrategy = class JwtRefreshStrategy extends (0, passport_1.Passpor
         }
         return {
             userId: payload.sub,
-            email: payload.email,
             username: payload.username,
             role: payload.role,
         };

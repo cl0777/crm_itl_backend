@@ -44,7 +44,6 @@ export class AppModule implements OnModuleInit {
       const existing = await this.usersService.findByUsername('admin_crm');
       if (!existing) {
         await this.usersService.createUser(
-          'clayoffical7@gmail.com',
           'admin_crm',
           'admin_itl_crm',
           'Admin',

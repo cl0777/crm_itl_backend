@@ -50,11 +50,10 @@ export class OrdersService {
     try {
       const adminUsers = await this.userModel.findAll({
         where: { role: 'admin' },
-        attributes: ['email'],
+        attributes: ['id', 'name'],
       });
-      const adminEmails = adminUsers
-        .map((u) => u.email)
-        .filter((email) => email && email.trim());
+      // Note: Email removed from users, using empty array for admin emails
+      const adminEmails: string[] = [];
 
       if (adminEmails.length > 0) {
         const htmlBody = `

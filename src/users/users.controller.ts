@@ -53,7 +53,6 @@ export class UsersController {
   @Roles('admin')
   async create(@Body() dto: CreateUserDto) {
     const user = await this.usersService.createUser(
-      dto.email,
       dto.username,
       dto.password,
       dto.name,
@@ -62,7 +61,6 @@ export class UsersController {
     );
     return {
       id: user.id,
-      email: user.email,
       username: user.username,
       name: user.name,
       role: user.role,

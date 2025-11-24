@@ -28,12 +28,12 @@ export class CustomerRegisterDto {
   customerId?: number;
 
   // Required customer profile fields for registration
-  @ApiProperty({ example: 'ABC Corporation' })
+  @ApiProperty({ example: 'ABC Corporation', description: 'Company name' })
   @IsNotEmpty()
   @IsString()
   partyName: string;
 
-  @ApiProperty({ example: 'ABC Corp' })
+  @ApiProperty({ example: 'ABC Corp', description: 'Represented name' })
   @IsNotEmpty()
   @IsString()
   shortname: string;
@@ -48,11 +48,6 @@ export class CustomerRegisterDto {
   @IsString()
   address2?: string;
 
-  @ApiProperty({ example: 'Building B', required: false })
-  @IsOptional()
-  @IsString()
-  address3?: string;
-
   @ApiProperty({ example: 'New York' })
   @IsNotEmpty()
   @IsString()
@@ -63,12 +58,12 @@ export class CustomerRegisterDto {
   @IsString()
   country: string;
 
-  @ApiProperty({ example: '+1-234-567-8900' })
+  @ApiProperty({ example: '+1-234-567-8900', description: 'Primary phone' })
   @IsNotEmpty()
   @IsString()
   phone1: string;
 
-  @ApiProperty({ example: '+1-987-654-3210', required: false })
+  @ApiProperty({ example: '+1-987-654-3210', required: false, description: 'Secondary phone' })
   @IsOptional()
   @IsString()
   phone2?: string;

@@ -29,9 +29,10 @@ export declare class CustomersService {
     }>;
     private issueTokensForCustomer;
     findAll(userId?: number, userRole?: string, userDepartmentId?: number): Promise<CustomerModel[]>;
-    findOne(id: number, userId?: number): Promise<import("./customer.model").CustomerAttributes>;
-    update(id: number, dto: UpdateCustomerDto, userId?: number): Promise<import("./customer.model").CustomerAttributes>;
-    remove(id: number, userId?: number): Promise<void>;
+    getCount(userId?: number, userRole?: string, userDepartmentId?: number): Promise<number>;
+    findOne(id: number, userId?: number, userRole?: string): Promise<import("./customer.model").CustomerAttributes>;
+    update(id: number, dto: UpdateCustomerDto, userId?: number, userRole?: string): Promise<import("./customer.model").CustomerAttributes>;
+    remove(id: number, userId?: number, userRole?: string): Promise<void>;
     importFromXlsx(fileBuffer: Buffer, userId: number, addedByName: string): Promise<{
         count: number;
         items: any[];

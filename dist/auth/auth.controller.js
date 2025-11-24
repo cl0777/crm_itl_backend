@@ -39,7 +39,6 @@ let AuthController = class AuthController {
     async refresh(req) {
         return this.authService.issueTokens({
             id: req.user.userId,
-            email: req.user.email,
             username: req.user.username,
             passwordHash: '',
             name: '',

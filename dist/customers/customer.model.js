@@ -40,10 +40,6 @@ __decorate([
     __metadata("design:type", String)
 ], CustomerModel.prototype, "address2", void 0);
 __decorate([
-    (0, sequelize_typescript_1.Column)({ type: sequelize_typescript_1.DataType.STRING, allowNull: true }),
-    __metadata("design:type", String)
-], CustomerModel.prototype, "address3", void 0);
-__decorate([
     (0, sequelize_typescript_1.Column)({ type: sequelize_typescript_1.DataType.STRING, allowNull: false }),
     __metadata("design:type", String)
 ], CustomerModel.prototype, "city", void 0);

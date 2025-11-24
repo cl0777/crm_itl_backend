@@ -23,10 +23,9 @@ let UsersService = class UsersService {
         this.userModel = userModel;
         this.departmentModel = departmentModel;
     }
-    async createUser(email, username, password, name, role = 'user', departmentId) {
+    async createUser(username, password, name, role = 'user', departmentId) {
         const passwordHash = await bcrypt.hash(password, 10);
         const created = await this.userModel.create({
-            email,
             username,
             passwordHash,
             name,
@@ -89,8 +88,6 @@ let UsersService = class UsersService {
         const user = await this.userModel.findByPk(id);
         if (!user)
             throw new common_1.NotFoundException('User not found');
-        if (dto.email)
-            user.email = dto.email;
         if (dto.username)
             user.username = dto.username;
         if (dto.name)

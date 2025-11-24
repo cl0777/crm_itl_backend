@@ -12,7 +12,6 @@ export class AuthService {
   async issueTokens(user: User) {
     const payload = {
       sub: user.id,
-      email: user.email,
       username: user.username,
       role: user.role,
       departmentId: user.departmentId,

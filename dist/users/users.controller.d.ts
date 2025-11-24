@@ -9,7 +9,6 @@ export declare class UsersController {
     findOne(id: string): Promise<Omit<import("./users.service").User, "passwordHash">>;
     create(dto: CreateUserDto): Promise<{
         id: number;
-        email: string;
         username: string;
         name: string;
         role: "admin" | "user" | "manager";
@@ -17,7 +16,6 @@ export declare class UsersController {
     }>;
     updateMe(req: any, dto: UpdateUserDto): Promise<{
         id: number;
-        email: string;
         username: string;
         name: string;
         role: "admin" | "user" | "manager";
@@ -25,7 +23,6 @@ export declare class UsersController {
     }>;
     update(id: string, dto: UpdateUserDto): Promise<{
         id: number;
-        email: string;
         username: string;
         name: string;
         role: "admin" | "user" | "manager";

@@ -39,10 +39,9 @@ let UsersController = class UsersController {
         return this.usersService.findById(Number(id));
     }
     async create(dto) {
-        const user = await this.usersService.createUser(dto.email, dto.username, dto.password, dto.name, dto.role ?? 'user', dto.departmentId);
+        const user = await this.usersService.createUser(dto.username, dto.password, dto.name, dto.role ?? 'user', dto.departmentId);
         return {
             id: user.id,
-            email: user.email,
             username: user.username,
             name: user.name,
             role: user.role,

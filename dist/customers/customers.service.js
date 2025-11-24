@@ -57,7 +57,6 @@ let CustomersService = class CustomersService {
                     shortname: dto.shortname,
                     address1: dto.address1,
                     address2: dto.address2,
-                    address3: dto.address3,
                     city: dto.city,
                     country: dto.country,
                     email: dto.email,
@@ -74,7 +73,6 @@ let CustomersService = class CustomersService {
                     shortname: dto.shortname,
                     address1: dto.address1,
                     address2: dto.address2,
-                    address3: dto.address3,
                     city: dto.city,
                     country: dto.country,
                     email: dto.email,
@@ -137,33 +135,60 @@ let CustomersService = class CustomersService {
             });
             const userIds = deptUsers.map((u) => u.id);
             where = { userId: { [sequelize_2.Op.in]: userIds } };
+            where.addedBy = { [sequelize_2.Op.ne]: 'Website' };
         }
         else if (userId) {
             where = { userId };
+            where.addedBy = { [sequelize_2.Op.ne]: 'Website' };
         }
         return this.customerModel.findAll({
             where,
-            include: [{ model: user_model_1.UserModel, attributes: ['id', 'name', 'email'] }],
+            include: [{ model: user_model_1.UserModel, attributes: ['id', 'name'] }],
         });
     }
-    async findOne(id, userId) {
+    async getCount(userId, userRole, userDepartmentId) {
+        let where = {};
+        if (userRole === 'admin') {
+        }
+        else if (userRole === 'manager' && userDepartmentId) {
+            const deptUsers = await user_model_1.UserModel.findAll({
+                where: { departmentId: userDepartmentId },
+                attributes: ['id'],
+            });
+            const userIds = deptUsers.map((u) => u.id);
+            where = { userId: { [sequelize_2.Op.in]: userIds } };
+            where.addedBy = { [sequelize_2.Op.ne]: 'Website' };
+        }
+        else if (userId) {
+            where = { userId };
+            where.addedBy = { [sequelize_2.Op.ne]: 'Website' };
+        }
+        return this.customerModel.count({ where });
+    }
+    async findOne(id, userId, userRole) {
         const where = { id };
         if (userId) {
             where.userId = userId;
         }
+        if (userRole !== 'admin') {
+            where.addedBy = { [sequelize_2.Op.ne]: 'Website' };
+        }
         const customer = await this.customerModel.findOne({
             where,
-            include: [{ model: user_model_1.UserModel, attributes: ['id', 'name', 'email'] }],
+            include: [{ model: user_model_1.UserModel, attributes: ['id', 'name'] }],
         });
         if (!customer) {
             throw new common_1.NotFoundException('Customer not found');
         }
         return customer.get({ plain: true });
     }
-    async update(id, dto, userId) {
+    async update(id, dto, userId, userRole) {
         const where = { id };
         if (userId) {
             where.userId = userId;
+        }
+        if (userRole !== 'admin') {
+            where.addedBy = { [sequelize_2.Op.ne]: 'Website' };
         }
         const customer = await this.customerModel.findOne({ where });
         if (!customer) {
@@ -172,10 +197,13 @@ let CustomersService = class CustomersService {
         await customer.update(dto);
         return customer.get({ plain: true });
     }
-    async remove(id, userId) {
+    async remove(id, userId, userRole) {
         const where = { id };
         if (userId) {
             where.userId = userId;
+        }
+        if (userRole !== 'admin') {
+            where.addedBy = { [sequelize_2.Op.ne]: 'Website' };
         }
         const deleted = await this.customerModel.destroy({ where });
         if (deleted === 0) {
@@ -183,11 +211,19 @@ let CustomersService = class CustomersService {
         }
     }
     async importFromXlsx(fileBuffer, userId, addedByName) {
+        console.log('[IMPORT] Starting import process');
+        console.log('[IMPORT] File buffer size:', fileBuffer?.length || 0);
+        console.log('[IMPORT] User ID:', userId);
+        console.log('[IMPORT] Added By:', addedByName);
         if (!fileBuffer || fileBuffer.length === 0) {
+            console.error('[IMPORT] Error: No file uploaded');
             throw new common_1.NotFoundException('No file uploaded');
         }
+        console.log('[IMPORT] Reading XLSX file...');
         const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+        console.log('[IMPORT] Workbook sheets:', workbook.SheetNames);
         const firstSheetName = workbook.SheetNames[0];
+        console.log('[IMPORT] Using sheet:', firstSheetName);
         const worksheet = workbook.Sheets[firstSheetName];
         const rows = XLSX.utils.sheet_to_json(worksheet, {
             defval: '',
@@ -195,6 +231,10 @@ let CustomersService = class CustomersService {
             blankrows: false,
             dateNF: 'yyyy-mm-dd',
         });
+        console.log('[IMPORT] Total rows found:', rows.length);
+        if (rows.length > 0) {
+            console.log('[IMPORT] First row sample:', Object.keys(rows[0]));
+        }
         const normalize = (key) => String(key || '')
             .toLowerCase()
             .replace(/\s+/g, '')
@@ -218,19 +258,35 @@ let CustomersService = class CustomersService {
             return '';
         };
         const created = [];
-        for (const row of rows) {
+        let skippedCount = 0;
+        let processedCount = 0;
+        console.log('[IMPORT] Processing rows...');
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
+            processedCount++;
+            if (i === 0 || (i + 1) % 10 === 0) {
+                console.log(`[IMPORT] Processing row ${i + 1}/${rows.length}`);
+            }
             const dto = {
                 partyName: getVal(row, [
                     'partyName',
                     'Party Name',
                     'party_name',
                     'PartyName',
+                    'Company Name',
+                    'companyName',
+                    'company_name',
+                    'CompanyName',
                 ]),
                 shortname: getVal(row, [
                     'shortname',
                     'Short Name',
                     'short_name',
                     'ShortName',
+                    'Represented Name',
+                    'representedName',
+                    'represented_name',
+                    'RepresentedName',
                 ]),
                 address1: getVal(row, [
                     'address1',
@@ -240,12 +296,29 @@ let CustomersService = class CustomersService {
                     'Address1',
                 ]),
                 address2: getVal(row, ['address2', 'Address 2', 'Address2']) || undefined,
-                address3: getVal(row, ['address3', 'Address 3', 'Address3']) || undefined,
                 city: getVal(row, ['city', 'City']),
                 country: getVal(row, ['country', 'Country']),
                 email: getVal(row, ['email', 'Email']),
-                phone1: getVal(row, ['phone1', 'Phone 1', 'phone', 'Phone', 'Phone1']),
-                phone2: getVal(row, ['phone2', 'Phone 2', 'Phone2']) || undefined,
+                phone1: getVal(row, [
+                    'phone1',
+                    'Phone 1',
+                    'phone',
+                    'Phone',
+                    'Phone1',
+                    'Primary Phone',
+                    'primaryPhone',
+                    'primary_phone',
+                    'PrimaryPhone',
+                ]),
+                phone2: getVal(row, [
+                    'phone2',
+                    'Phone 2',
+                    'Phone2',
+                    'Secondary Phone',
+                    'secondaryPhone',
+                    'secondary_phone',
+                    'SecondaryPhone',
+                ]) || undefined,
                 status: getVal(row, ['status', 'Status']) || 'Active',
             };
             if (!dto.partyName ||
@@ -256,6 +329,17 @@ let CustomersService = class CustomersService {
                 !dto.email ||
                 !dto.phone1 ||
                 !dto.status) {
+                skippedCount++;
+                console.log(`[IMPORT] Row ${i + 1} skipped - missing required fields:`, {
+                    partyName: !!dto.partyName,
+                    shortname: !!dto.shortname,
+                    address1: !!dto.address1,
+                    city: !!dto.city,
+                    country: !!dto.country,
+                    email: !!dto.email,
+                    phone1: !!dto.phone1,
+                    status: !!dto.status,
+                });
                 continue;
             }
             const rowUserName = getVal(row, [
@@ -267,21 +351,40 @@ let CustomersService = class CustomersService {
             let assignedUserId = userId;
             let assignedAddedBy = addedByName;
             if (rowUserName) {
+                console.log(`[IMPORT] Row ${i + 1} - Looking for user:`, rowUserName);
                 const userEntity = await user_model_1.UserModel.findOne({
                     where: { name: rowUserName },
                 });
                 if (userEntity) {
                     assignedUserId = userEntity.id;
                     assignedAddedBy = userEntity.name;
+                    console.log(`[IMPORT] Row ${i + 1} - Assigned to user:`, userEntity.name, `(ID: ${userEntity.id})`);
+                }
+                else {
+                    console.log(`[IMPORT] Row ${i + 1} - User not found:`, rowUserName, '- using default user');
                 }
             }
-            const customer = await this.customerModel.create({
-                ...dto,
-                userId: assignedUserId,
-                addedBy: assignedAddedBy,
-            });
-            created.push(customer.get({ plain: true }));
+            try {
+                const customer = await this.customerModel.create({
+                    ...dto,
+                    userId: assignedUserId,
+                    addedBy: assignedAddedBy,
+                });
+                created.push(customer.get({ plain: true }));
+                console.log(`[IMPORT] Row ${i + 1} - Created customer:`, dto.partyName, `(ID: ${customer.id})`);
+            }
+            catch (error) {
+                console.error(`[IMPORT] Row ${i + 1} - Error creating customer:`, error?.message);
+                console.error(`[IMPORT] Row ${i + 1} - DTO:`, JSON.stringify(dto, null, 2));
+                throw error;
+            }
         }
+        console.log('[IMPORT] Import completed:', {
+            totalRows: rows.length,
+            processed: processedCount,
+            created: created.length,
+            skipped: skippedCount,
+        });
         return { count: created.length, items: created };
     }
 };

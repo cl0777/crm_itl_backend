@@ -8,6 +8,9 @@ export declare class CustomersController {
     constructor(customersService: CustomersService, usersService: UsersService);
     create(dto: CreateCustomerDto, req: any): Promise<import("./customer.model").CustomerAttributes>;
     findAll(req: any): Promise<import("./customer.model").CustomerModel[]>;
+    getCount(req: any): Promise<{
+        count: number;
+    }>;
     findOne(id: string, req: any): Promise<import("./customer.model").CustomerAttributes>;
     update(id: string, dto: UpdateCustomerDto, req: any): Promise<import("./customer.model").CustomerAttributes>;
     remove(id: string, req: any): Promise<{
