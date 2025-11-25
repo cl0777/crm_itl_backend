@@ -17,6 +17,7 @@ const common_1 = require("@nestjs/common");
 const sequelize_1 = require("@nestjs/sequelize");
 const message_model_1 = require("./message.model");
 const otp_model_1 = require("./otp.model");
+const signature_model_1 = require("./signature.model");
 const nodemailer = require("nodemailer");
 const marked_1 = require("marked");
 const customer_model_1 = require("../customers/customer.model");
@@ -24,9 +25,10 @@ const customer_account_model_1 = require("../customers/customer-account.model");
 const user_model_1 = require("../users/user.model");
 const sequelize_2 = require("sequelize");
 let MessagesService = class MessagesService {
-    constructor(messageModel, otpModel, customerAccountModel, customerModel, userModel) {
+    constructor(messageModel, otpModel, signatureModel, customerAccountModel, customerModel, userModel) {
         this.messageModel = messageModel;
         this.otpModel = otpModel;
+        this.signatureModel = signatureModel;
         this.customerAccountModel = customerAccountModel;
         this.customerModel = customerModel;
         this.userModel = userModel;
@@ -187,8 +189,26 @@ let MessagesService = class MessagesService {
             seen.add(key);
             return true;
         });
-        const html = (await marked_1.marked.parse(dto.bodyMarkdown || ''));
-        const text = (dto.bodyMarkdown || '').replace(/[#*_>`]/g, '');
+        let signature = null;
+        if (dto.signatureId) {
+            signature = await this.signatureModel.findOne({
+                where: { id: dto.signatureId, userId: senderUserId },
+            });
+            if (!signature) {
+                throw new common_1.NotFoundException(`Signature with ID ${dto.signatureId} not found`);
+            }
+        }
+        else {
+            signature = await this.signatureModel.findOne({
+                where: { userId: senderUserId, isDefault: true },
+            });
+        }
+        let bodyMarkdown = dto.bodyMarkdown || '';
+        if (signature) {
+            bodyMarkdown = `${bodyMarkdown}\n\n${signature.content}`;
+        }
+        const html = (await marked_1.marked.parse(bodyMarkdown));
+        const text = bodyMarkdown.replace(/[#*_>`]/g, '');
         const nodemailerAttachments = (attachments || []).map((f) => ({
             filename: f.originalname,
             content: f.buffer,
@@ -207,7 +227,7 @@ let MessagesService = class MessagesService {
                 });
                 const saved = await this.messageModel.create({
                     subject: dto.subject,
-                    bodyMarkdown: dto.bodyMarkdown,
+                    bodyMarkdown: bodyMarkdown,
                     bodyHtml: html,
                     fromEmail: String(fromAddress || ''),
                     toEmail: r.email,
@@ -221,7 +241,7 @@ let MessagesService = class MessagesService {
             catch (err) {
                 await this.messageModel.create({
                     subject: dto.subject,
-                    bodyMarkdown: dto.bodyMarkdown,
+                    bodyMarkdown: bodyMarkdown,
                     bodyHtml: html,
                     fromEmail: String(fromAddress || ''),
                     toEmail: r.email,
@@ -410,9 +430,10 @@ exports.MessagesService = MessagesService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, sequelize_1.InjectModel)(message_model_1.MessageModel)),
     __param(1, (0, sequelize_1.InjectModel)(otp_model_1.OtpModel)),
-    __param(2, (0, sequelize_1.InjectModel)(customer_account_model_1.CustomerAccountModel)),
-    __param(3, (0, sequelize_1.InjectModel)(customer_model_1.CustomerModel)),
-    __param(4, (0, sequelize_1.InjectModel)(user_model_1.UserModel)),
-    __metadata("design:paramtypes", [Object, Object, Object, Object, Object])
+    __param(2, (0, sequelize_1.InjectModel)(signature_model_1.SignatureModel)),
+    __param(3, (0, sequelize_1.InjectModel)(customer_account_model_1.CustomerAccountModel)),
+    __param(4, (0, sequelize_1.InjectModel)(customer_model_1.CustomerModel)),
+    __param(5, (0, sequelize_1.InjectModel)(user_model_1.UserModel)),
+    __metadata("design:paramtypes", [Object, Object, Object, Object, Object, Object])
 ], MessagesService);
 //# sourceMappingURL=messages.service.js.map

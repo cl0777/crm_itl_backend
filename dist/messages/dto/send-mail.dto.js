@@ -47,4 +47,15 @@ __decorate([
     (0, class_validator_1.ArrayNotEmpty)(),
     __metadata("design:type", Array)
 ], SendMailDto.prototype, "customerIds", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Optional signature ID to append to the email',
+        example: 1,
+        required: false,
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_transformer_1.Type)(() => Number),
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], SendMailDto.prototype, "signatureId", void 0);
 //# sourceMappingURL=send-mail.dto.js.map

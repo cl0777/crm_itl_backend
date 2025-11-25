@@ -1,6 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, ArrayNotEmpty, IsString } from 'class-validator';
-import { Transform } from 'class-transformer';
+import {
+  IsArray,
+  ArrayNotEmpty,
+  IsString,
+  IsOptional,
+  IsNumber,
+} from 'class-validator';
+import { Transform, Type } from 'class-transformer';
 
 export class SendMailDto {
   @ApiProperty({ example: 'Quarterly Update' })
@@ -32,4 +38,14 @@ export class SendMailDto {
   @IsArray()
   @ArrayNotEmpty()
   customerIds: number[];
+
+  @ApiProperty({
+    description: 'Optional signature ID to append to the email',
+    example: 1,
+    required: false,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  signatureId?: number;
 }

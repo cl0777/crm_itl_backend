@@ -7,6 +7,7 @@ import {
 import { InjectModel } from '@nestjs/sequelize';
 import { MessageModel } from './message.model';
 import { OtpModel } from './otp.model';
+import { SignatureModel } from './signature.model';
 import { SendMailDto } from './dto/send-mail.dto';
 import { SendOtpDto } from './dto/send-otp.dto';
 import { CheckOtpDto } from './dto/check-otp.dto';
@@ -24,6 +25,8 @@ export class MessagesService {
     private readonly messageModel: typeof MessageModel,
     @InjectModel(OtpModel)
     private readonly otpModel: typeof OtpModel,
+    @InjectModel(SignatureModel)
+    private readonly signatureModel: typeof SignatureModel,
     @InjectModel(CustomerAccountModel)
     private readonly customerAccountModel: typeof CustomerAccountModel,
     @InjectModel(CustomerModel)
@@ -232,8 +235,32 @@ export class MessagesService {
         return true;
       });
 
-    const html = (await marked.parse(dto.bodyMarkdown || '')) as string;
-    const text = (dto.bodyMarkdown || '').replace(/[#*_>`]/g, '');
+    // Get signature if provided
+    let signature: SignatureModel | null = null;
+    if (dto.signatureId) {
+      signature = await this.signatureModel.findOne({
+        where: { id: dto.signatureId, userId: senderUserId },
+      });
+      if (!signature) {
+        throw new NotFoundException(
+          `Signature with ID ${dto.signatureId} not found`,
+        );
+      }
+    } else {
+      // If no signature ID provided, try to get the default signature
+      signature = await this.signatureModel.findOne({
+        where: { userId: senderUserId, isDefault: true },
+      });
+    }
+
+    // Build email body with signature
+    let bodyMarkdown = dto.bodyMarkdown || '';
+    if (signature) {
+      bodyMarkdown = `${bodyMarkdown}\n\n${signature.content}`;
+    }
+
+    const html = (await marked.parse(bodyMarkdown)) as string;
+    const text = bodyMarkdown.replace(/[#*_>`]/g, '');
 
     const nodemailerAttachments = (attachments || []).map((f) => ({
       filename: f.originalname,
@@ -255,7 +282,7 @@ export class MessagesService {
 
         const saved = await this.messageModel.create({
           subject: dto.subject,
-          bodyMarkdown: dto.bodyMarkdown,
+          bodyMarkdown: bodyMarkdown, // Save with signature included
           bodyHtml: html,
           fromEmail: String(fromAddress || ''),
           toEmail: r.email,
@@ -271,7 +298,7 @@ export class MessagesService {
       } catch (err: any) {
         await this.messageModel.create({
           subject: dto.subject,
-          bodyMarkdown: dto.bodyMarkdown,
+          bodyMarkdown: bodyMarkdown, // Save with signature included
           bodyHtml: html,
           fromEmail: String(fromAddress || ''),
           toEmail: r.email,

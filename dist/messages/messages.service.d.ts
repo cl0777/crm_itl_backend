@@ -1,5 +1,6 @@
 import { MessageModel } from './message.model';
 import { OtpModel } from './otp.model';
+import { SignatureModel } from './signature.model';
 import { SendMailDto } from './dto/send-mail.dto';
 import { SendOtpDto } from './dto/send-otp.dto';
 import { CheckOtpDto } from './dto/check-otp.dto';
@@ -9,10 +10,11 @@ import { UserModel } from '../users/user.model';
 export declare class MessagesService {
     private readonly messageModel;
     private readonly otpModel;
+    private readonly signatureModel;
     private readonly customerAccountModel;
     private readonly customerModel;
     private readonly userModel;
-    constructor(messageModel: typeof MessageModel, otpModel: typeof OtpModel, customerAccountModel: typeof CustomerAccountModel, customerModel: typeof CustomerModel, userModel: typeof UserModel);
+    constructor(messageModel: typeof MessageModel, otpModel: typeof OtpModel, signatureModel: typeof SignatureModel, customerAccountModel: typeof CustomerAccountModel, customerModel: typeof CustomerModel, userModel: typeof UserModel);
     private buildTransporter;
     private getFromAddress;
     private addRecipientInfo;
