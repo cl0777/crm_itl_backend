@@ -15,6 +15,7 @@ const message_model_1 = require("./message.model");
 const otp_model_1 = require("./otp.model");
 const customer_model_1 = require("../customers/customer.model");
 const customer_account_model_1 = require("../customers/customer-account.model");
+const user_model_1 = require("../users/user.model");
 const customers_module_1 = require("../customers/customers.module");
 const users_module_1 = require("../users/users.module");
 let MessagesModule = class MessagesModule {
@@ -28,6 +29,7 @@ exports.MessagesModule = MessagesModule = __decorate([
                 otp_model_1.OtpModel,
                 customer_model_1.CustomerModel,
                 customer_account_model_1.CustomerAccountModel,
+                user_model_1.UserModel,
             ]),
             customers_module_1.CustomersModule,
             users_module_1.UsersModule,

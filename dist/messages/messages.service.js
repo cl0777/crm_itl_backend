@@ -21,13 +21,15 @@ const nodemailer = require("nodemailer");
 const marked_1 = require("marked");
 const customer_model_1 = require("../customers/customer.model");
 const customer_account_model_1 = require("../customers/customer-account.model");
+const user_model_1 = require("../users/user.model");
 const sequelize_2 = require("sequelize");
 let MessagesService = class MessagesService {
-    constructor(messageModel, otpModel, customerAccountModel, customerModel) {
+    constructor(messageModel, otpModel, customerAccountModel, customerModel, userModel) {
         this.messageModel = messageModel;
         this.otpModel = otpModel;
         this.customerAccountModel = customerAccountModel;
         this.customerModel = customerModel;
+        this.userModel = userModel;
     }
     buildTransporter() {
         const host = process.env.SMTP_HOST;
@@ -61,9 +63,110 @@ let MessagesService = class MessagesService {
         }
         return from;
     }
-    async history(userId) {
-        const where = userId ? { userId } : {};
-        return this.messageModel.findAll({ where, order: [['createdAt', 'DESC']] });
+    async addRecipientInfo(messages) {
+        if (messages.length === 0) {
+            return messages;
+        }
+        const recipientEmails = [
+            ...new Set(messages.map((m) => m.toEmail.toLowerCase().trim())),
+        ];
+        const customers = await this.customerModel.findAll({
+            where: {
+                email: {
+                    [sequelize_2.Op.in]: recipientEmails,
+                },
+            },
+            attributes: [
+                'id',
+                'partyName',
+                'shortname',
+                'email',
+                'phone1',
+                'city',
+                'country',
+            ],
+        });
+        const customerMap = new Map(customers.map((c) => [c.email.toLowerCase().trim(), c]));
+        return messages.map((message) => {
+            const messageData = message.get({ plain: true });
+            const recipientEmail = message.toEmail.toLowerCase().trim();
+            const recipient = customerMap.get(recipientEmail);
+            return {
+                ...messageData,
+                recipient: recipient
+                    ? {
+                        id: recipient.id,
+                        partyName: recipient.partyName,
+                        shortname: recipient.shortname,
+                        email: recipient.email,
+                        phone1: recipient.phone1,
+                        city: recipient.city,
+                        country: recipient.country,
+                    }
+                    : {
+                        email: message.toEmail,
+                        partyName: null,
+                        shortname: null,
+                    },
+            };
+        });
+    }
+    async history(role, userId) {
+        let messages;
+        if (role === 'admin') {
+            messages = await this.messageModel.findAll({
+                include: [
+                    {
+                        model: user_model_1.UserModel,
+                        as: 'user',
+                        attributes: ['id', 'username', 'name', 'role', 'departmentId'],
+                    },
+                ],
+                order: [['createdAt', 'DESC']],
+            });
+        }
+        else if (role === 'manager') {
+            const manager = await this.userModel.findByPk(userId, {
+                attributes: ['id', 'departmentId'],
+            });
+            if (!manager || !manager.departmentId) {
+                return [];
+            }
+            const departmentUsers = await this.userModel.findAll({
+                where: { departmentId: manager.departmentId },
+                attributes: ['id'],
+            });
+            const departmentUserIds = departmentUsers.map((u) => u.id);
+            messages = await this.messageModel.findAll({
+                where: {
+                    userId: {
+                        [sequelize_2.Op.in]: departmentUserIds,
+                    },
+                },
+                include: [
+                    {
+                        model: user_model_1.UserModel,
+                        as: 'user',
+                        attributes: ['id', 'username', 'name', 'role', 'departmentId'],
+                    },
+                ],
+                order: [['createdAt', 'DESC']],
+            });
+        }
+        else {
+            messages = await this.messageModel.findAll({
+                where: { userId },
+                include: [
+                    {
+                        model: user_model_1.UserModel,
+                        as: 'user',
+                        attributes: ['id', 'username', 'name', 'role', 'departmentId'],
+                    },
+                ],
+                order: [['createdAt', 'DESC']],
+            });
+        }
+        return this.addRecipientInfo(messages);
     }
     async sendMail(dto, attachments, senderUserId) {
         console.log('sendMail', dto, attachments, senderUserId);
@@ -309,6 +412,7 @@ exports.MessagesService = MessagesService = __decorate([
     __param(1, (0, sequelize_1.InjectModel)(otp_model_1.OtpModel)),
     __param(2, (0, sequelize_1.InjectModel)(customer_account_model_1.CustomerAccountModel)),
     __param(3, (0, sequelize_1.InjectModel)(customer_model_1.CustomerModel)),
-    __metadata("design:paramtypes", [Object, Object, Object, Object])
+    __param(4, (0, sequelize_1.InjectModel)(user_model_1.UserModel)),
+    __metadata("design:paramtypes", [Object, Object, Object, Object, Object])
 ], MessagesService);
 //# sourceMappingURL=messages.service.js.map

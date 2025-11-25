@@ -25,6 +25,8 @@ export class CustomersService {
     private readonly customerModel: typeof CustomerModel,
     @InjectModel(CustomerAccountModel)
     private readonly customerAccountModel: typeof CustomerAccountModel,
+    @InjectModel(UserModel)
+    private readonly userModel: typeof UserModel,
     private readonly jwtService: JwtService,
   ) {}
 
@@ -139,24 +141,41 @@ export class CustomersService {
 
   async findAll(userId?: number, userRole?: string, userDepartmentId?: number) {
     let where: any = {};
+    
     if (userRole === 'admin') {
       // Admin sees all
-    } else if (userRole === 'manager' && userDepartmentId) {
+    } else if (userRole === 'manager') {
       // Manager sees customers from users in their department
-      const deptUsers = await UserModel.findAll({
-        where: { departmentId: userDepartmentId },
-        attributes: ['id'],
-      });
-      const userIds = deptUsers.map((u) => u.id);
-      where = { userId: { [Op.in]: userIds } };
-      // Exclude customers from website (only admin can see them)
-      where.addedBy = { [Op.ne]: 'Website' };
+      let departmentId = userDepartmentId;
+      
+      // If departmentId is not provided, fetch it from the database
+      if (!departmentId && userId) {
+        const manager = await this.userModel.findByPk(userId, {
+          attributes: ['id', 'departmentId'],
+        });
+        departmentId = manager?.departmentId || undefined;
+      }
+      
+      if (departmentId) {
+        const deptUsers = await this.userModel.findAll({
+          where: { departmentId },
+          attributes: ['id'],
+        });
+        const userIds = deptUsers.map((u) => u.id);
+        where = { userId: { [Op.in]: userIds } };
+        // Exclude customers from website (only admin can see them)
+        where.addedBy = { [Op.ne]: 'Website' };
+      } else {
+        // If manager has no department, return empty array
+        return [];
+      }
     } else if (userId) {
       // Regular user sees only their own customers
       where = { userId };
       // Exclude customers from website (only admin can see them)
       where.addedBy = { [Op.ne]: 'Website' };
     }
+    
     return this.customerModel.findAll({
       where,
       include: [{ model: UserModel, attributes: ['id', 'name'] }],
@@ -165,36 +184,87 @@ export class CustomersService {
 
   async getCount(userId?: number, userRole?: string, userDepartmentId?: number) {
     let where: any = {};
+    
     if (userRole === 'admin') {
       // Admin sees all
-    } else if (userRole === 'manager' && userDepartmentId) {
+    } else if (userRole === 'manager') {
       // Manager sees customers from users in their department
-      const deptUsers = await UserModel.findAll({
-        where: { departmentId: userDepartmentId },
-        attributes: ['id'],
-      });
-      const userIds = deptUsers.map((u) => u.id);
-      where = { userId: { [Op.in]: userIds } };
-      // Exclude customers from website (only admin can see them)
-      where.addedBy = { [Op.ne]: 'Website' };
+      let departmentId = userDepartmentId;
+      
+      // If departmentId is not provided, fetch it from the database
+      if (!departmentId && userId) {
+        const manager = await this.userModel.findByPk(userId, {
+          attributes: ['id', 'departmentId'],
+        });
+        departmentId = manager?.departmentId || undefined;
+      }
+      
+      if (departmentId) {
+        const deptUsers = await this.userModel.findAll({
+          where: { departmentId },
+          attributes: ['id'],
+        });
+        const userIds = deptUsers.map((u) => u.id);
+        where = { userId: { [Op.in]: userIds } };
+        // Exclude customers from website (only admin can see them)
+        where.addedBy = { [Op.ne]: 'Website' };
+      } else {
+        // If manager has no department, return 0
+        return 0;
+      }
     } else if (userId) {
       // Regular user sees only their own customers
       where = { userId };
       // Exclude customers from website (only admin can see them)
       where.addedBy = { [Op.ne]: 'Website' };
     }
+    
     return this.customerModel.count({ where });
   }
 
-  async findOne(id: number, userId?: number, userRole?: string) {
+  async findOne(
+    id: number,
+    userId?: number,
+    userRole?: string,
+    userDepartmentId?: number,
+  ) {
     const where: any = { id };
-    if (userId) {
+    
+    if (userRole === 'admin') {
+      // Admin can see all customers
+    } else if (userRole === 'manager') {
+      // Manager can see customers from users in their department
+      let departmentId = userDepartmentId;
+      
+      // If departmentId is not provided, fetch it from the database
+      if (!departmentId && userId) {
+        const manager = await this.userModel.findByPk(userId, {
+          attributes: ['id', 'departmentId'],
+        });
+        departmentId = manager?.departmentId || undefined;
+      }
+      
+      if (departmentId) {
+        const deptUsers = await this.userModel.findAll({
+          where: { departmentId },
+          attributes: ['id'],
+        });
+        const userIds = deptUsers.map((u) => u.id);
+        where.userId = { [Op.in]: userIds };
+      } else {
+        // If manager has no department, customer not found
+        throw new NotFoundException('Customer not found');
+      }
+      
+      // Exclude customers from website (only admin can see them)
+      where.addedBy = { [Op.ne]: 'Website' };
+    } else if (userId) {
+      // Regular user can see only their own customers
       where.userId = userId;
-    }
-    // Exclude customers from website for non-admin users
-    if (userRole !== 'admin') {
+      // Exclude customers from website (only admin can see them)
       where.addedBy = { [Op.ne]: 'Website' };
     }
+    
     const customer = await this.customerModel.findOne({
       where,
       include: [{ model: UserModel, attributes: ['id', 'name'] }],
@@ -205,15 +275,50 @@ export class CustomersService {
     return customer.get({ plain: true });
   }
 
-  async update(id: number, dto: UpdateCustomerDto, userId?: number, userRole?: string) {
+  async update(
+    id: number,
+    dto: UpdateCustomerDto,
+    userId?: number,
+    userRole?: string,
+    userDepartmentId?: number,
+  ) {
     const where: any = { id };
-    if (userId) {
+    
+    if (userRole === 'admin') {
+      // Admin can update all customers
+    } else if (userRole === 'manager') {
+      // Manager can update customers from users in their department
+      let departmentId = userDepartmentId;
+      
+      // If departmentId is not provided, fetch it from the database
+      if (!departmentId && userId) {
+        const manager = await this.userModel.findByPk(userId, {
+          attributes: ['id', 'departmentId'],
+        });
+        departmentId = manager?.departmentId || undefined;
+      }
+      
+      if (departmentId) {
+        const deptUsers = await this.userModel.findAll({
+          where: { departmentId },
+          attributes: ['id'],
+        });
+        const userIds = deptUsers.map((u) => u.id);
+        where.userId = { [Op.in]: userIds };
+      } else {
+        // If manager has no department, customer not found
+        throw new NotFoundException('Customer not found');
+      }
+      
+      // Exclude customers from website (only admin can see them)
+      where.addedBy = { [Op.ne]: 'Website' };
+    } else if (userId) {
+      // Regular user can update only their own customers
       where.userId = userId;
-    }
-    // Exclude customers from website for non-admin users
-    if (userRole !== 'admin') {
+      // Exclude customers from website (only admin can see them)
       where.addedBy = { [Op.ne]: 'Website' };
     }
+    
     const customer = await this.customerModel.findOne({ where });
     if (!customer) {
       throw new NotFoundException('Customer not found');
@@ -222,15 +327,49 @@ export class CustomersService {
     return customer.get({ plain: true });
   }
 
-  async remove(id: number, userId?: number, userRole?: string) {
+  async remove(
+    id: number,
+    userId?: number,
+    userRole?: string,
+    userDepartmentId?: number,
+  ) {
     const where: any = { id };
-    if (userId) {
+    
+    if (userRole === 'admin') {
+      // Admin can delete all customers
+    } else if (userRole === 'manager') {
+      // Manager can delete customers from users in their department
+      let departmentId = userDepartmentId;
+      
+      // If departmentId is not provided, fetch it from the database
+      if (!departmentId && userId) {
+        const manager = await this.userModel.findByPk(userId, {
+          attributes: ['id', 'departmentId'],
+        });
+        departmentId = manager?.departmentId || undefined;
+      }
+      
+      if (departmentId) {
+        const deptUsers = await this.userModel.findAll({
+          where: { departmentId },
+          attributes: ['id'],
+        });
+        const userIds = deptUsers.map((u) => u.id);
+        where.userId = { [Op.in]: userIds };
+      } else {
+        // If manager has no department, customer not found
+        throw new NotFoundException('Customer not found');
+      }
+      
+      // Exclude customers from website (only admin can see them)
+      where.addedBy = { [Op.ne]: 'Website' };
+    } else if (userId) {
+      // Regular user can delete only their own customers
       where.userId = userId;
-    }
-    // Exclude customers from website for non-admin users
-    if (userRole !== 'admin') {
+      // Exclude customers from website (only admin can see them)
       where.addedBy = { [Op.ne]: 'Website' };
     }
+    
     const deleted = await this.customerModel.destroy({ where });
     if (deleted === 0) {
       throw new NotFoundException('Customer not found');

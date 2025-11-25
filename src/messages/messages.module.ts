@@ -6,6 +6,7 @@ import { MessageModel } from './message.model';
 import { OtpModel } from './otp.model';
 import { CustomerModel } from '../customers/customer.model';
 import { CustomerAccountModel } from '../customers/customer-account.model';
+import { UserModel } from '../users/user.model';
 import { CustomersModule } from '../customers/customers.module';
 import { UsersModule } from '../users/users.module';
 
@@ -16,6 +17,7 @@ import { UsersModule } from '../users/users.module';
       OtpModel,
       CustomerModel,
       CustomerAccountModel,
+      UserModel,
     ]),
     CustomersModule,
     UsersModule,

@@ -14,6 +14,7 @@ import * as nodemailer from 'nodemailer';
 import { marked } from 'marked';
 import { CustomerModel } from '../customers/customer.model';
 import { CustomerAccountModel } from '../customers/customer-account.model';
+import { UserModel } from '../users/user.model';
 import { Op } from 'sequelize';
 
 @Injectable()
@@ -27,6 +28,8 @@ export class MessagesService {
     private readonly customerAccountModel: typeof CustomerAccountModel,
     @InjectModel(CustomerModel)
     private readonly customerModel: typeof CustomerModel,
+    @InjectModel(UserModel)
+    private readonly userModel: typeof UserModel,
   ) {}
 
   private buildTransporter() {
@@ -71,9 +74,136 @@ export class MessagesService {
     return from;
   }
 
-  async history(userId?: number) {
-    const where = userId ? { userId } : {};
-    return this.messageModel.findAll({ where, order: [['createdAt', 'DESC']] });
+  private async addRecipientInfo(messages: MessageModel[]) {
+    if (messages.length === 0) {
+      return messages;
+    }
+
+    // Get unique recipient emails
+    const recipientEmails = [
+      ...new Set(messages.map((m) => m.toEmail.toLowerCase().trim())),
+    ];
+
+    // Fetch customer information for all recipient emails
+    const customers = await this.customerModel.findAll({
+      where: {
+        email: {
+          [Op.in]: recipientEmails,
+        },
+      },
+      attributes: [
+        'id',
+        'partyName',
+        'shortname',
+        'email',
+        'phone1',
+        'city',
+        'country',
+      ],
+    });
+
+    // Create a map of email -> customer for quick lookup
+    const customerMap = new Map(
+      customers.map((c) => [c.email.toLowerCase().trim(), c]),
+    );
+
+    // Add recipient information to each message
+    return messages.map((message) => {
+      const messageData = message.get({ plain: true }) as any;
+      const recipientEmail = message.toEmail.toLowerCase().trim();
+      const recipient = customerMap.get(recipientEmail);
+
+      return {
+        ...messageData,
+        recipient: recipient
+          ? {
+              id: recipient.id,
+              partyName: recipient.partyName,
+              shortname: recipient.shortname,
+              email: recipient.email,
+              phone1: recipient.phone1,
+              city: recipient.city,
+              country: recipient.country,
+            }
+          : {
+              email: message.toEmail,
+              partyName: null,
+              shortname: null,
+            },
+      };
+    });
+  }
+
+  async history(role: 'admin' | 'user' | 'manager', userId: number) {
+    let messages: MessageModel[];
+
+    // Admin can view all messages
+    if (role === 'admin') {
+      messages = await this.messageModel.findAll({
+        include: [
+          {
+            model: UserModel,
+            as: 'user',
+            attributes: ['id', 'username', 'name', 'role', 'departmentId'],
+          },
+        ],
+        order: [['createdAt', 'DESC']],
+      });
+    }
+    // Manager can view messages from users in their department
+    else if (role === 'manager') {
+      // First, get the manager's departmentId
+      const manager = await this.userModel.findByPk(userId, {
+        attributes: ['id', 'departmentId'],
+      });
+
+      if (!manager || !manager.departmentId) {
+        // If manager has no department, return empty array
+        return [];
+      }
+
+      // Get all user IDs in the manager's department
+      const departmentUsers = await this.userModel.findAll({
+        where: { departmentId: manager.departmentId },
+        attributes: ['id'],
+      });
+
+      const departmentUserIds = departmentUsers.map((u) => u.id);
+
+      // Return messages from users in the manager's department
+      messages = await this.messageModel.findAll({
+        where: {
+          userId: {
+            [Op.in]: departmentUserIds,
+          },
+        },
+        include: [
+          {
+            model: UserModel,
+            as: 'user',
+            attributes: ['id', 'username', 'name', 'role', 'departmentId'],
+          },
+        ],
+        order: [['createdAt', 'DESC']],
+      });
+    }
+    // User can view only their own messages
+    else {
+      messages = await this.messageModel.findAll({
+        where: { userId },
+        include: [
+          {
+            model: UserModel,
+            as: 'user',
+            attributes: ['id', 'username', 'name', 'role', 'departmentId'],
+          },
+        ],
+        order: [['createdAt', 'DESC']],
+      });
+    }
+
+    // Add recipient information to all messages
+    return this.addRecipientInfo(messages);
   }
 
   async sendMail(

@@ -5,15 +5,18 @@ import { SendOtpDto } from './dto/send-otp.dto';
 import { CheckOtpDto } from './dto/check-otp.dto';
 import { CustomerModel } from '../customers/customer.model';
 import { CustomerAccountModel } from '../customers/customer-account.model';
+import { UserModel } from '../users/user.model';
 export declare class MessagesService {
     private readonly messageModel;
     private readonly otpModel;
     private readonly customerAccountModel;
     private readonly customerModel;
-    constructor(messageModel: typeof MessageModel, otpModel: typeof OtpModel, customerAccountModel: typeof CustomerAccountModel, customerModel: typeof CustomerModel);
+    private readonly userModel;
+    constructor(messageModel: typeof MessageModel, otpModel: typeof OtpModel, customerAccountModel: typeof CustomerAccountModel, customerModel: typeof CustomerModel, userModel: typeof UserModel);
     private buildTransporter;
     private getFromAddress;
-    history(userId?: number): Promise<MessageModel[]>;
+    private addRecipientInfo;
+    history(role: 'admin' | 'user' | 'manager', userId: number): Promise<any[]>;
     sendMail(dto: SendMailDto, attachments: Array<Express.Multer.File>, senderUserId: number): Promise<{
         count: number;
         results: any[];

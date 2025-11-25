@@ -13,7 +13,12 @@ async function bootstrap() {
     app.setGlobalPrefix('api');
     const allowedOrigins = process.env.FRONTEND_URL
         ? process.env.FRONTEND_URL.split(',').map((url) => url.trim())
-        : ['http://localhost:3000', 'http://localhost:5173'];
+        : [
+            'http://localhost:3000',
+            'http://localhost:5173',
+            'https://htl-tm.com',
+            'https://www.htl-tm.com',
+        ];
     app.enableCors({
         origin: (origin, callback) => {
             if (!origin)

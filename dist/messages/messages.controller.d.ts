@@ -5,7 +5,7 @@ import { CheckOtpDto } from './dto/check-otp.dto';
 export declare class MessagesController {
     private readonly messagesService;
     constructor(messagesService: MessagesService);
-    history(req: any): Promise<import("./message.model").MessageModel[]>;
+    history(req: any): Promise<any[]>;
     sendMail(dto: SendMailDto, attachments: Array<Express.Multer.File>, req: any): Promise<{
         count: number;
         results: any[];

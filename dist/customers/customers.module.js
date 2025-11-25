@@ -15,6 +15,7 @@ const customers_auth_controller_1 = require("./customers.auth.controller");
 const customers_service_1 = require("./customers.service");
 const customer_model_1 = require("./customer.model");
 const customer_account_model_1 = require("./customer-account.model");
+const user_model_1 = require("../users/user.model");
 const users_module_1 = require("../users/users.module");
 let CustomersModule = class CustomersModule {
 };
@@ -22,7 +23,7 @@ exports.CustomersModule = CustomersModule;
 exports.CustomersModule = CustomersModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            sequelize_1.SequelizeModule.forFeature([customer_model_1.CustomerModel, customer_account_model_1.CustomerAccountModel]),
+            sequelize_1.SequelizeModule.forFeature([customer_model_1.CustomerModel, customer_account_model_1.CustomerAccountModel, user_model_1.UserModel]),
             users_module_1.UsersModule,
             jwt_1.JwtModule.register({
                 secret: process.env.JWT_SECRET || 'dev_jwt_secret_change_me',

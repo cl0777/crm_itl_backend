@@ -23,9 +23,10 @@ const XLSX = require("xlsx");
 const bcrypt = require("bcrypt");
 const jwt_1 = require("@nestjs/jwt");
 let CustomersService = class CustomersService {
-    constructor(customerModel, customerAccountModel, jwtService) {
+    constructor(customerModel, customerAccountModel, userModel, jwtService) {
         this.customerModel = customerModel;
         this.customerAccountModel = customerAccountModel;
+        this.userModel = userModel;
         this.jwtService = jwtService;
     }
     async create(dto, userId, addedByName) {
@@ -128,14 +129,26 @@ let CustomersService = class CustomersService {
         let where = {};
         if (userRole === 'admin') {
         }
-        else if (userRole === 'manager' && userDepartmentId) {
-            const deptUsers = await user_model_1.UserModel.findAll({
-                where: { departmentId: userDepartmentId },
-                attributes: ['id'],
-            });
-            const userIds = deptUsers.map((u) => u.id);
-            where = { userId: { [sequelize_2.Op.in]: userIds } };
-            where.addedBy = { [sequelize_2.Op.ne]: 'Website' };
+        else if (userRole === 'manager') {
+            let departmentId = userDepartmentId;
+            if (!departmentId && userId) {
+                const manager = await this.userModel.findByPk(userId, {
+                    attributes: ['id', 'departmentId'],
+                });
+                departmentId = manager?.departmentId || undefined;
+            }
+            if (departmentId) {
+                const deptUsers = await this.userModel.findAll({
+                    where: { departmentId },
+                    attributes: ['id'],
+                });
+                const userIds = deptUsers.map((u) => u.id);
+                where = { userId: { [sequelize_2.Op.in]: userIds } };
+                where.addedBy = { [sequelize_2.Op.ne]: 'Website' };
+            }
+            else {
+                return [];
+            }
         }
         else if (userId) {
             where = { userId };
@@ -150,14 +163,26 @@ let CustomersService = class CustomersService {
         let where = {};
         if (userRole === 'admin') {
         }
-        else if (userRole === 'manager' && userDepartmentId) {
-            const deptUsers = await user_model_1.UserModel.findAll({
-                where: { departmentId: userDepartmentId },
-                attributes: ['id'],
-            });
-            const userIds = deptUsers.map((u) => u.id);
-            where = { userId: { [sequelize_2.Op.in]: userIds } };
-            where.addedBy = { [sequelize_2.Op.ne]: 'Website' };
+        else if (userRole === 'manager') {
+            let departmentId = userDepartmentId;
+            if (!departmentId && userId) {
+                const manager = await this.userModel.findByPk(userId, {
+                    attributes: ['id', 'departmentId'],
+                });
+                departmentId = manager?.departmentId || undefined;
+            }
+            if (departmentId) {
+                const deptUsers = await this.userModel.findAll({
+                    where: { departmentId },
+                    attributes: ['id'],
+                });
+                const userIds = deptUsers.map((u) => u.id);
+                where = { userId: { [sequelize_2.Op.in]: userIds } };
+                where.addedBy = { [sequelize_2.Op.ne]: 'Website' };
+            }
+            else {
+                return 0;
+            }
         }
         else if (userId) {
             where = { userId };
@@ -165,12 +190,33 @@ let CustomersService = class CustomersService {
         }
         return this.customerModel.count({ where });
     }
-    async findOne(id, userId, userRole) {
+    async findOne(id, userId, userRole, userDepartmentId) {
         const where = { id };
-        if (userId) {
-            where.userId = userId;
+        if (userRole === 'admin') {
         }
-        if (userRole !== 'admin') {
+        else if (userRole === 'manager') {
+            let departmentId = userDepartmentId;
+            if (!departmentId && userId) {
+                const manager = await this.userModel.findByPk(userId, {
+                    attributes: ['id', 'departmentId'],
+                });
+                departmentId = manager?.departmentId || undefined;
+            }
+            if (departmentId) {
+                const deptUsers = await this.userModel.findAll({
+                    where: { departmentId },
+                    attributes: ['id'],
+                });
+                const userIds = deptUsers.map((u) => u.id);
+                where.userId = { [sequelize_2.Op.in]: userIds };
+            }
+            else {
+                throw new common_1.NotFoundException('Customer not found');
+            }
+            where.addedBy = { [sequelize_2.Op.ne]: 'Website' };
+        }
+        else if (userId) {
+            where.userId = userId;
             where.addedBy = { [sequelize_2.Op.ne]: 'Website' };
         }
         const customer = await this.customerModel.findOne({
@@ -182,12 +228,33 @@ let CustomersService = class CustomersService {
         }
         return customer.get({ plain: true });
     }
-    async update(id, dto, userId, userRole) {
+    async update(id, dto, userId, userRole, userDepartmentId) {
         const where = { id };
-        if (userId) {
-            where.userId = userId;
+        if (userRole === 'admin') {
         }
-        if (userRole !== 'admin') {
+        else if (userRole === 'manager') {
+            let departmentId = userDepartmentId;
+            if (!departmentId && userId) {
+                const manager = await this.userModel.findByPk(userId, {
+                    attributes: ['id', 'departmentId'],
+                });
+                departmentId = manager?.departmentId || undefined;
+            }
+            if (departmentId) {
+                const deptUsers = await this.userModel.findAll({
+                    where: { departmentId },
+                    attributes: ['id'],
+                });
+                const userIds = deptUsers.map((u) => u.id);
+                where.userId = { [sequelize_2.Op.in]: userIds };
+            }
+            else {
+                throw new common_1.NotFoundException('Customer not found');
+            }
+            where.addedBy = { [sequelize_2.Op.ne]: 'Website' };
+        }
+        else if (userId) {
+            where.userId = userId;
             where.addedBy = { [sequelize_2.Op.ne]: 'Website' };
         }
         const customer = await this.customerModel.findOne({ where });
@@ -197,12 +264,33 @@ let CustomersService = class CustomersService {
         await customer.update(dto);
         return customer.get({ plain: true });
     }
-    async remove(id, userId, userRole) {
+    async remove(id, userId, userRole, userDepartmentId) {
         const where = { id };
-        if (userId) {
-            where.userId = userId;
+        if (userRole === 'admin') {
         }
-        if (userRole !== 'admin') {
+        else if (userRole === 'manager') {
+            let departmentId = userDepartmentId;
+            if (!departmentId && userId) {
+                const manager = await this.userModel.findByPk(userId, {
+                    attributes: ['id', 'departmentId'],
+                });
+                departmentId = manager?.departmentId || undefined;
+            }
+            if (departmentId) {
+                const deptUsers = await this.userModel.findAll({
+                    where: { departmentId },
+                    attributes: ['id'],
+                });
+                const userIds = deptUsers.map((u) => u.id);
+                where.userId = { [sequelize_2.Op.in]: userIds };
+            }
+            else {
+                throw new common_1.NotFoundException('Customer not found');
+            }
+            where.addedBy = { [sequelize_2.Op.ne]: 'Website' };
+        }
+        else if (userId) {
+            where.userId = userId;
             where.addedBy = { [sequelize_2.Op.ne]: 'Website' };
         }
         const deleted = await this.customerModel.destroy({ where });
@@ -393,6 +481,7 @@ exports.CustomersService = CustomersService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, sequelize_1.InjectModel)(customer_model_1.CustomerModel)),
     __param(1, (0, sequelize_1.InjectModel)(customer_account_model_1.CustomerAccountModel)),
-    __metadata("design:paramtypes", [Object, Object, jwt_1.JwtService])
+    __param(2, (0, sequelize_1.InjectModel)(user_model_1.UserModel)),
+    __metadata("design:paramtypes", [Object, Object, Object, jwt_1.JwtService])
 ], CustomersService);
 //# sourceMappingURL=customers.service.js.map

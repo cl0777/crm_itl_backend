@@ -7,6 +7,7 @@ import {
   UseGuards,
   UseInterceptors,
   UploadedFiles,
+  UnauthorizedException,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -33,9 +34,14 @@ export class MessagesController {
   @UseGuards(JwtAuthGuard)
   @ApiOkResponse({ description: 'Get message history' })
   async history(@Req() req: any) {
-    const userRole = req.user?.role;
-    const userId = userRole === 'admin' ? undefined : req.user?.userId;
-    return this.messagesService.history(userId);
+    const userRole = req.user?.role || 'user';
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      throw new UnauthorizedException('User ID not found in request');
+    }
+
+    return this.messagesService.history(userRole, userId);
   }
 
   @Post('mail')

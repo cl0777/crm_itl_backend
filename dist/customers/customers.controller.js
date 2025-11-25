@@ -49,17 +49,20 @@ let CustomersController = class CustomersController {
     async findOne(id, req) {
         const userRole = req.user?.role;
         const userId = userRole === 'admin' ? undefined : req.user?.userId;
-        return this.customersService.findOne(Number(id), userId, userRole);
+        const userDepartmentId = req.user?.departmentId;
+        return this.customersService.findOne(Number(id), userId, userRole, userDepartmentId);
     }
     async update(id, dto, req) {
         const userRole = req.user?.role;
         const userId = userRole === 'admin' ? undefined : req.user?.userId;
-        return this.customersService.update(Number(id), dto, userId, userRole);
+        const userDepartmentId = req.user?.departmentId;
+        return this.customersService.update(Number(id), dto, userId, userRole, userDepartmentId);
     }
     async remove(id, req) {
         const userRole = req.user?.role;
         const userId = userRole === 'admin' ? undefined : req.user?.userId;
-        await this.customersService.remove(Number(id), userId, userRole);
+        const userDepartmentId = req.user?.departmentId;
+        await this.customersService.remove(Number(id), userId, userRole, userDepartmentId);
         return { success: true };
     }
     async import(file, req) {

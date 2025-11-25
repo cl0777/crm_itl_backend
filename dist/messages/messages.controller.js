@@ -27,9 +27,12 @@ let MessagesController = class MessagesController {
         this.messagesService = messagesService;
     }
     async history(req) {
-        const userRole = req.user?.role;
-        const userId = userRole === 'admin' ? undefined : req.user?.userId;
-        return this.messagesService.history(userId);
+        const userRole = req.user?.role || 'user';
+        const userId = req.user?.userId;
+        if (!userId) {
+            throw new common_1.UnauthorizedException('User ID not found in request');
+        }
+        return this.messagesService.history(userRole, userId);
     }
     async sendMail(dto, attachments, req) {
         console.log('=== SEND MAIL REQUEST ===');

@@ -73,7 +73,13 @@ export class CustomersController {
   async findOne(@Param('id') id: string, @Req() req: any) {
     const userRole = req.user?.role;
     const userId = userRole === 'admin' ? undefined : req.user?.userId;
-    return this.customersService.findOne(Number(id), userId, userRole);
+    const userDepartmentId = req.user?.departmentId;
+    return this.customersService.findOne(
+      Number(id),
+      userId,
+      userRole,
+      userDepartmentId,
+    );
   }
 
   @Patch(':id')
@@ -85,7 +91,14 @@ export class CustomersController {
   ) {
     const userRole = req.user?.role;
     const userId = userRole === 'admin' ? undefined : req.user?.userId;
-    return this.customersService.update(Number(id), dto, userId, userRole);
+    const userDepartmentId = req.user?.departmentId;
+    return this.customersService.update(
+      Number(id),
+      dto,
+      userId,
+      userRole,
+      userDepartmentId,
+    );
   }
 
   @Delete(':id')
@@ -93,7 +106,13 @@ export class CustomersController {
   async remove(@Param('id') id: string, @Req() req: any) {
     const userRole = req.user?.role;
     const userId = userRole === 'admin' ? undefined : req.user?.userId;
-    await this.customersService.remove(Number(id), userId, userRole);
+    const userDepartmentId = req.user?.departmentId;
+    await this.customersService.remove(
+      Number(id),
+      userId,
+      userRole,
+      userDepartmentId,
+    );
     return { success: true };
   }
 
